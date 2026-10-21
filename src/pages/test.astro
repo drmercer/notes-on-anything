@@ -1,0 +1,16 @@
+---
+import { TestPage } from '../components/TestPage';
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="generator" content={Astro.generator} />
+		<title>Test Page - Notes on Anything</title>
+	</head>
+	<body style="margin: 0; padding: 0; background-color: #f9fafb; font-family: system-ui, -apple-system, sans-serif;">
+		<TestPage client:only="preact" />
+	</body>
+</html>
