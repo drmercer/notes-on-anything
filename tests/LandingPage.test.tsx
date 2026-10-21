@@ -14,7 +14,7 @@ describe('LandingPage component', () => {
     expect(vnode.props.isSupported).toBe(true);
   });
 
-  it('contains links to GitHub repo and danmercer.net in rendered output', () => {
+  it('contains links to GitHub repo, danmercer.net, and app title in rendered output', () => {
     const rendered = LandingPage({
       isSupported: true,
       onOpenFolder: vi.fn()
@@ -24,6 +24,7 @@ describe('LandingPage component', () => {
     expect(json).toContain('https://danmercer.net');
     expect(json).toContain('https://github.com/drmercer/notes-on-anything');
     expect(json).toContain('Open a folder');
+    expect(json).toContain('Notes on Anything 📝');
   });
 
   it('renders unsupported CTA button and explanation when Web FS is not supported', () => {

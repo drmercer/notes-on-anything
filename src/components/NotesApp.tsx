@@ -134,6 +134,9 @@ export function NotesApp() {
         }
 
         const title = parsed?.title ?? '';
+        if (title.includes('Notes on Anything 📝')) {
+          return;
+        }
         if (title !== activeTitleRef.current) {
           if (!isSubscribed) return;
           setActiveTitle(title);
@@ -259,7 +262,7 @@ export function NotesApp() {
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '1rem', fontFamily: 'system-ui, sans-serif' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #ccc', paddingBottom: '0.5rem' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Notes on Anything</h1>
+          <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Notes on Anything 📝</h1>
           <span style={{ fontSize: '0.85rem', color: '#666' }}>
             {dirName ? `Notes directory: ${dirName}` : 'No directory opened'}
           </span>
