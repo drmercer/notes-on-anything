@@ -12,8 +12,10 @@ import {
   generateNoteFilename
 } from '../lib/frontmatter';
 import { openPictureInPicture } from '../lib/pip';
+import { isWebFSSupported, sendToDesktop } from '../lib/browserSupport';
 
 export function NotesApp() {
+  const [isSupported, setIsSupported] = useState<boolean>(true);
   const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const [dirName, setDirName] = useState<string>('');
   const [activeTitle, setActiveTitle] = useState<string>('');
@@ -37,6 +39,11 @@ export function NotesApp() {
   frontmatterDataRef.current = frontmatterData;
 
   useEffect(() => {
+    if (!isWebFSSupported()) {
+      setIsSupported(false);
+      return;
+    }
+
     (async () => {
       const savedHandle = await getSavedDirectoryHandle();
       if (savedHandle) {
@@ -54,8 +61,8 @@ export function NotesApp() {
 
   const handleSelectDirectory = async () => {
     try {
-      if (!('showDirectoryPicker' in window)) {
-        alert('Web File System Access API is not supported in this browser.');
+      if (!isWebFSSupported()) {
+        setIsSupported(false);
         return;
       }
       const handle = await (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker();
@@ -203,6 +210,57 @@ export function NotesApp() {
       setStatusMessage(`Error saving note: ${err.message}`);
     }
   };
+
+  if (!isSupported) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        padding: '2rem',
+        boxSizing: 'border-box',
+        textAlign: 'center',
+        fontFamily: 'system-ui, sans-serif',
+        backgroundColor: '#f8f9fa',
+        color: '#212529'
+      }}>
+        <div style={{
+          maxWidth: '500px',
+          backgroundColor: '#ffffff',
+          padding: '2.5rem',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+          border: '1px solid #e9ecef'
+        }}>
+          <h1 style={{ marginTop: 0, fontSize: '1.75rem', color: '#d9534f' }}>
+            Browser Not Supported
+          </h1>
+          <p style={{ fontSize: '1rem', lineHeight: '1.5', color: '#495057', marginBottom: '1.5rem' }}>
+            <strong>Notes on Anything</strong> requires the Web File System Access API to access and edit notes directly on your local disk.
+            Your current browser or device does not support this feature. Please open this app in a desktop browser such as Chrome, Edge, or Opera on Windows, macOS, or Linux.
+          </p>
+          <button
+            onClick={() => sendToDesktop()}
+            style={{
+              padding: '0.75rem 1.5rem',
+              fontSize: '1rem',
+              fontWeight: 'bold',
+              color: '#ffffff',
+              backgroundColor: '#0275d8',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+          >
+            Send to Desktop
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '1rem', fontFamily: 'system-ui, sans-serif' }}>
