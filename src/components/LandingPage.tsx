@@ -43,7 +43,7 @@ export function LandingPage({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111827' }}>
-              Notes on Anything
+              Notes on Anything 📝
             </span>
             <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
               by <a
