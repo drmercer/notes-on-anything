@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useRef } from 'preact/hooks';
 import { parseFrontmatter } from '../lib/frontmatter';
+
+const APP_TITLE = 'Notes on Anything 📝';
 
 async function getOpfsTestDir(): Promise<FileSystemDirectoryHandle | null> {
   if (typeof navigator === 'undefined' || !navigator.storage || !navigator.storage.getDirectory) {
@@ -38,6 +40,17 @@ export function TestPage() {
   const [activeWindow, setActiveWindow] = useState<string>('');
   const [newWindowName, setNewWindowName] = useState<string>('');
   const [statusMessage, setStatusMessage] = useState<string>('Initializing OPFS...');
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
+  const checkAndSyncIframeFocus = async () => {
+    if (typeof document !== 'undefined' && iframeRef.current && document.activeElement === iframeRef.current) {
+      const testDir = await getOpfsTestDir();
+      if (testDir) {
+        await writeActiveJson(testDir, APP_TITLE);
+        setActiveWindow(APP_TITLE);
+      }
+    }
+  };
 
   const refreshWindows = async () => {
     const testDir = await getOpfsTestDir();
@@ -47,6 +60,10 @@ export function TestPage() {
     }
 
     try {
+      if (typeof document !== 'undefined' && iframeRef.current && document.activeElement === iframeRef.current) {
+        await writeActiveJson(testDir, APP_TITLE);
+      }
+
       const currentActive = await readActiveJson(testDir);
       setActiveWindow(currentActive);
 
@@ -80,9 +97,24 @@ export function TestPage() {
   };
 
   useEffect(() => {
+    const onFocusOrBlur = () => {
+      checkAndSyncIframeFocus();
+    };
+
+    window.addEventListener('focus', onFocusOrBlur);
+    window.addEventListener('blur', onFocusOrBlur);
+
     refreshWindows();
-    const interval = setInterval(refreshWindows, 1000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      checkAndSyncIframeFocus();
+      refreshWindows();
+    }, 1000);
+
+    return () => {
+      window.removeEventListener('focus', onFocusOrBlur);
+      window.removeEventListener('blur', onFocusOrBlur);
+      clearInterval(interval);
+    };
   }, []);
 
   const handleSelectWindow = async (title: string) => {
@@ -138,6 +170,7 @@ export function TestPage() {
           position: 'relative'
         }}>
           <iframe
+            ref={iframeRef}
             src="/?opfs"
             title="Main App OPFS Preview"
             style={{

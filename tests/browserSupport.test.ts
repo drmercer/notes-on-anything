@@ -41,6 +41,7 @@ describe('browserSupport utils', () => {
       const mailto = getMailtoUrl(testUrl);
       expect(mailto).toContain('mailto:?subject=');
       expect(mailto).toContain(encodeURIComponent(testUrl));
+      expect(mailto).toContain(encodeURIComponent('Notes on Anything 📝'));
     });
   });
 
