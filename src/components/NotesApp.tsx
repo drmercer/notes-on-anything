@@ -105,7 +105,16 @@ export function NotesApp() {
         const root = await navigator.storage.getDirectory();
         handle = await root.getDirectoryHandle('test', { create: true });
       } else {
-        handle = await (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker();
+        handle = await (
+          window as unknown as {
+            showDirectoryPicker: (options?: { mode?: 'read' | 'readwrite' }) => Promise<FileSystemDirectoryHandle>;
+          }
+        ).showDirectoryPicker({ mode: 'readwrite' });
+      }
+      const hasPerm = await verifyPermission(handle, true);
+      if (!hasPerm) {
+        setPermissionError('Permission was not granted for the folder. Please re-select or try again.');
+        return;
       }
       await saveDirectoryHandle(handle);
       setDirHandle(handle);
