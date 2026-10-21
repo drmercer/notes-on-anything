@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'preact/hooks';
 import {
   getSavedDirectoryHandle,
   saveDirectoryHandle,
+  queryPermission,
   verifyPermission,
   readTextFile,
   writeTextFile
@@ -12,11 +13,14 @@ import {
   generateNoteFilename
 } from '../lib/frontmatter';
 import { openPictureInPicture } from '../lib/pip';
-import { isWebFSSupported, sendToDesktop } from '../lib/browserSupport';
+import { isWebFSSupported } from '../lib/browserSupport';
+import { LandingPage } from './LandingPage';
 
 export function NotesApp() {
   const [isSupported, setIsSupported] = useState<boolean>(true);
   const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  const [savedHandle, setSavedHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
   const [dirName, setDirName] = useState<string>('');
   const [activeTitle, setActiveTitle] = useState<string>('');
   const [activeNoteFile, setActiveNoteFile] = useState<FileSystemFileHandle | null>(null);
@@ -45,19 +49,38 @@ export function NotesApp() {
     }
 
     (async () => {
-      const savedHandle = await getSavedDirectoryHandle();
-      if (savedHandle) {
-        const hasPerm = await verifyPermission(savedHandle, true);
+      const saved = await getSavedDirectoryHandle();
+      if (saved) {
+        const hasPerm = await queryPermission(saved, true);
         if (hasPerm) {
-          setDirHandle(savedHandle);
-          setDirName(savedHandle.name);
-          setStatusMessage(`Connected to notes directory: "${savedHandle.name}"`);
+          setDirHandle(saved);
+          setDirName(saved.name);
+          setStatusMessage(`Connected to notes directory: "${saved.name}"`);
         } else {
-          setStatusMessage('Permission denied for saved notes directory. Please re-select folder.');
+          setSavedHandle(saved);
         }
       }
     })();
   }, []);
+
+  const handleOpenSavedDirectory = async () => {
+    if (!savedHandle) return;
+    try {
+      const hasPerm = await verifyPermission(savedHandle, true);
+      if (hasPerm) {
+        setDirHandle(savedHandle);
+        setDirName(savedHandle.name);
+        setStatusMessage(`Connected to notes directory: "${savedHandle.name}"`);
+        setSavedHandle(null);
+        setPermissionError(null);
+      } else {
+        setPermissionError('Permission was not granted for the folder. Please re-select or try again.');
+      }
+    } catch (err: any) {
+      console.error('Error opening saved folder:', err);
+      setPermissionError(`Error opening directory: ${err.message}`);
+    }
+  };
 
   const handleSelectDirectory = async () => {
     try {
@@ -69,6 +92,8 @@ export function NotesApp() {
       await saveDirectoryHandle(handle);
       setDirHandle(handle);
       setDirName(handle.name);
+      setSavedHandle(null);
+      setPermissionError(null);
       setStatusMessage(`Connected to notes directory: "${handle.name}"`);
     } catch (err: any) {
       if (err.name !== 'AbortError') {
@@ -211,54 +236,15 @@ export function NotesApp() {
     }
   };
 
-  if (!isSupported) {
+  if (!dirHandle) {
     return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        padding: '2rem',
-        boxSizing: 'border-box',
-        textAlign: 'center',
-        fontFamily: 'system-ui, sans-serif',
-        backgroundColor: '#f8f9fa',
-        color: '#212529'
-      }}>
-        <div style={{
-          maxWidth: '500px',
-          backgroundColor: '#ffffff',
-          padding: '2.5rem',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-          border: '1px solid #e9ecef'
-        }}>
-          <h1 style={{ marginTop: 0, fontSize: '1.75rem', color: '#d9534f' }}>
-            Browser Not Supported
-          </h1>
-          <p style={{ fontSize: '1rem', lineHeight: '1.5', color: '#495057', marginBottom: '1.5rem' }}>
-            <strong>Notes on Anything</strong> requires the Web File System Access API to access and edit notes directly on your local disk.
-            Your current browser or device does not support this feature. Please open this app in a desktop browser such as Chrome, Edge, or Opera on Windows, macOS, or Linux.
-          </p>
-          <button
-            onClick={() => sendToDesktop()}
-            style={{
-              padding: '0.75rem 1.5rem',
-              fontSize: '1rem',
-              fontWeight: 'bold',
-              color: '#ffffff',
-              backgroundColor: '#0275d8',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s'
-            }}
-          >
-            Send to Desktop
-          </button>
-        </div>
-      </div>
+      <LandingPage
+        isSupported={isSupported}
+        savedFolderName={savedHandle ? savedHandle.name : null}
+        onOpenFolder={handleSelectDirectory}
+        onOpenSavedFolder={handleOpenSavedDirectory}
+        errorMessage={permissionError}
+      />
     );
   }
 
@@ -273,7 +259,7 @@ export function NotesApp() {
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button onClick={handleSelectDirectory} style={{ padding: '0.5rem 1rem', cursor: 'pointer' }}>
-            {dirHandle ? 'Change Folder' : 'Open Notes Folder'}
+            Change Folder
           </button>
           <button onClick={() => openPictureInPicture()} style={{ padding: '0.5rem 1rem', cursor: 'pointer' }}>
             Open Pop-up

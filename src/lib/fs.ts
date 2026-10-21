@@ -61,24 +61,34 @@ export async function saveDirectoryHandle(handle: FileSystemDirectoryHandle): Pr
 }
 
 /**
- * Verifies or requests permission for FileSystemHandle
+ * Queries permission for FileSystemHandle non-interactively (without prompting user)
  */
-export async function verifyPermission(handle: FileSystemHandle, readWrite: boolean = true): Promise<boolean> {
+export async function queryPermission(handle: FileSystemHandle, readWrite: boolean = true): Promise<boolean> {
   if (!handle) return false;
   const handleWithPerms = handle as unknown as {
     queryPermission: (options?: { mode?: 'read' | 'readwrite' }) => Promise<string>;
-    requestPermission: (options?: { mode?: 'read' | 'readwrite' }) => Promise<string>;
   };
   const options = { mode: (readWrite ? 'readwrite' : 'read') as 'read' | 'readwrite' };
   if (typeof handleWithPerms.queryPermission === 'function') {
-    if ((await handleWithPerms.queryPermission(options)) === 'granted') {
-      return true;
-    }
+    return (await handleWithPerms.queryPermission(options)) === 'granted';
   }
+  return false;
+}
+
+/**
+ * Verifies or requests permission for FileSystemHandle (interactive - user gesture required)
+ */
+export async function verifyPermission(handle: FileSystemHandle, readWrite: boolean = true): Promise<boolean> {
+  if (!handle) return false;
+  if (await queryPermission(handle, readWrite)) {
+    return true;
+  }
+  const handleWithPerms = handle as unknown as {
+    requestPermission: (options?: { mode?: 'read' | 'readwrite' }) => Promise<string>;
+  };
+  const options = { mode: (readWrite ? 'readwrite' : 'read') as 'read' | 'readwrite' };
   if (typeof handleWithPerms.requestPermission === 'function') {
-    if ((await handleWithPerms.requestPermission(options)) === 'granted') {
-      return true;
-    }
+    return (await handleWithPerms.requestPermission(options)) === 'granted';
   }
   return false;
 }
