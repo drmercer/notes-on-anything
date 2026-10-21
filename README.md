@@ -23,6 +23,7 @@ To bootstrap and run this project, the following exact commands were executed:
 2. **Install Dependencies**:
    ```bash
    pnpm add astro @astrojs/preact preact
+   pnpm add -D typescript @types/node vitest @astrojs/check
    ```
 
 3. **Run Development Server**:
@@ -30,7 +31,13 @@ To bootstrap and run this project, the following exact commands were executed:
    pnpm dev
    ```
 
-4. **Build Production Assets**:
+4. **Run Type Check & Tests**:
+   ```bash
+   pnpm check
+   pnpm test
+   ```
+
+5. **Build Production Assets**:
    ```bash
    pnpm build
    ```
@@ -51,6 +58,6 @@ The web app functionality:
 
 implementation details: 
 * use pnpm for package management for the web app
-* use Astro for the web app
-* if a frontend framework is needed, use Preact
-* the Gnome extension should be in a subdirectory `watcher/ubuntu/` with a README explaining how to install it locally
+* use Astro and TypeScript for the web app
+* use Preact for the frontend framework
+* the Gnome extension should be in a subdirectory `watcher/ubuntu/` with a README explaining how to install it locally (in vanilla JS, no build steps or TS)

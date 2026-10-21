@@ -1,4 +1,3 @@
-import { h } from 'preact';
 import { useState, useEffect, useRef } from 'preact/hooks';
 import {
   getSavedDirectoryHandle,
@@ -6,38 +5,37 @@ import {
   verifyPermission,
   readTextFile,
   writeTextFile
-} from '../lib/fs.js';
+} from '../lib/fs';
 import {
   parseFrontmatter,
   stringifyFrontmatter,
   generateNoteFilename
-} from '../lib/frontmatter.js';
-import { openPictureInPicture } from '../lib/pip.js';
+} from '../lib/frontmatter';
+import { openPictureInPicture } from '../lib/pip';
 
 export function NotesApp() {
-  const [dirHandle, setDirHandle] = useState(null);
-  const [dirName, setDirName] = useState('');
-  const [activeTitle, setActiveTitle] = useState('');
-  const [activeNoteFile, setActiveNoteFile] = useState(null);
-  const [activeFileName, setActiveFileName] = useState('');
-  const [noteContent, setNoteContent] = useState('');
-  const [frontmatterData, setFrontmatterData] = useState({});
-  const [statusMessage, setStatusMessage] = useState('Please select a notes directory.');
-  const [isSaved, setIsSaved] = useState(true);
+  const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  const [dirName, setDirName] = useState<string>('');
+  const [activeTitle, setActiveTitle] = useState<string>('');
+  const [activeNoteFile, setActiveNoteFile] = useState<FileSystemFileHandle | null>(null);
+  const [activeFileName, setActiveFileName] = useState<string>('');
+  const [noteContent, setNoteContent] = useState<string>('');
+  const [frontmatterData, setFrontmatterData] = useState<Record<string, string>>({});
+  const [statusMessage, setStatusMessage] = useState<string>('Please select a notes directory.');
+  const [isSaved, setIsSaved] = useState<boolean>(true);
 
-  const activeTitleRef = useRef(activeTitle);
+  const activeTitleRef = useRef<string>(activeTitle);
   activeTitleRef.current = activeTitle;
 
-  const activeNoteFileRef = useRef(activeNoteFile);
+  const activeNoteFileRef = useRef<FileSystemFileHandle | null>(activeNoteFile);
   activeNoteFileRef.current = activeNoteFile;
 
-  const noteContentRef = useRef(noteContent);
+  const noteContentRef = useRef<string>(noteContent);
   noteContentRef.current = noteContent;
 
-  const frontmatterDataRef = useRef(frontmatterData);
+  const frontmatterDataRef = useRef<Record<string, string>>(frontmatterData);
   frontmatterDataRef.current = frontmatterData;
 
-  // On mount: try loading saved directory handle
   useEffect(() => {
     (async () => {
       const savedHandle = await getSavedDirectoryHandle();
@@ -54,19 +52,18 @@ export function NotesApp() {
     })();
   }, []);
 
-  // Open directory picker
   const handleSelectDirectory = async () => {
     try {
       if (!('showDirectoryPicker' in window)) {
         alert('Web File System Access API is not supported in this browser.');
         return;
       }
-      const handle = await window.showDirectoryPicker();
+      const handle = await (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker();
       await saveDirectoryHandle(handle);
       setDirHandle(handle);
       setDirName(handle.name);
       setStatusMessage(`Connected to notes directory: "${handle.name}"`);
-    } catch (err) {
+    } catch (err: any) {
       if (err.name !== 'AbortError') {
         console.error('Error selecting directory:', err);
         setStatusMessage(`Error opening directory: ${err.message}`);
@@ -74,29 +71,27 @@ export function NotesApp() {
     }
   };
 
-  // Watch active.json and search / auto-create notes
   useEffect(() => {
     if (!dirHandle) return;
 
     let isSubscribed = true;
-    let pollInterval = null;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
 
     const checkActiveJson = async () => {
       try {
-        let activeJsonHandle = null;
+        let activeJsonHandle: FileSystemFileHandle | null = null;
         try {
           activeJsonHandle = await dirHandle.getFileHandle('active.json');
         } catch (e) {
-          // File not found yet in directory
           return;
         }
 
         const jsonText = await readTextFile(activeJsonHandle);
-        let parsed = null;
+        let parsed: { title?: string } | null = null;
         try {
           parsed = JSON.parse(jsonText);
         } catch (e) {
-          return; // invalid json or in progress of writing
+          return;
         }
 
         const title = parsed?.title ?? '';
@@ -110,31 +105,29 @@ export function NotesApp() {
       }
     };
 
-    // Helper to search or create note matching title
-    const resolveNoteForTitle = async (title) => {
+    const resolveNoteForTitle = async (title: string) => {
       if (!dirHandle) return;
 
       try {
-        let matchedFileHandle = null;
+        let matchedFileHandle: FileSystemFileHandle | null = null;
         let matchedFileName = '';
-        let matchedFrontmatter = {};
+        let matchedFrontmatter: Record<string, string> = {};
         let matchedBody = '';
 
-        // Iterate over entries in the directory
-        for await (const entry of dirHandle.values()) {
+        for await (const entry of (dirHandle as any).values()) {
           if (entry.kind === 'file' && entry.name.endsWith('.md')) {
             try {
-              const fileText = await readTextFile(entry);
+              const fileText = await readTextFile(entry as FileSystemFileHandle);
               const { data, content } = parseFrontmatter(fileText);
               if (data && data.windowTitle === title) {
-                matchedFileHandle = entry;
+                matchedFileHandle = entry as FileSystemFileHandle;
                 matchedFileName = entry.name;
                 matchedFrontmatter = data;
                 matchedBody = content;
                 break;
               }
             } catch (e) {
-              // error reading individual file
+              // ignore file read error
             }
           }
         }
@@ -147,7 +140,6 @@ export function NotesApp() {
           setIsSaved(true);
           setStatusMessage(`Active note: ${matchedFileName}`);
         } else if (title) {
-          // No matching file found; create a new markdown file
           const newFileName = generateNoteFilename();
           const newFrontmatter = { windowTitle: title };
           const initialContent = stringifyFrontmatter(newFrontmatter, `# Note for ${title}\n\n`);
@@ -164,17 +156,16 @@ export function NotesApp() {
           setIsSaved(true);
           setStatusMessage(`Created new note: ${newFileName}`);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error resolving note for title:', err);
         setStatusMessage(`Error finding note: ${err.message}`);
       }
     };
 
-    // Try using FileSystemObserver API if available, else poll active.json every 1 second
-    let observer = null;
+    let observer: any = null;
     if ('FileSystemObserver' in window) {
       try {
-        observer = new window.FileSystemObserver(async () => {
+        observer = new (window as any).FileSystemObserver(async () => {
           checkActiveJson();
         });
         observer.observe(dirHandle);
@@ -183,7 +174,6 @@ export function NotesApp() {
       }
     }
 
-    // Fallback polling
     pollInterval = setInterval(checkActiveJson, 1000);
     checkActiveJson();
 
@@ -194,13 +184,12 @@ export function NotesApp() {
     };
   }, [dirHandle]);
 
-  // Handle note editor content change
-  const handleContentChange = (e) => {
-    setNoteContent(e.target.value);
+  const handleContentChange = (e: Event) => {
+    const target = e.target as HTMLTextAreaElement;
+    setNoteContent(target.value);
     setIsSaved(false);
   };
 
-  // Save current note back to disk
   const handleSaveNote = async () => {
     if (!activeNoteFile) return;
 
@@ -209,7 +198,7 @@ export function NotesApp() {
       await writeTextFile(activeNoteFile, fullText);
       setIsSaved(true);
       setStatusMessage(`Saved ${activeFileName} successfully.`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving note:', err);
       setStatusMessage(`Error saving note: ${err.message}`);
     }

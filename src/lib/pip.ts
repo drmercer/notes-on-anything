@@ -2,20 +2,25 @@
  * Document Picture-in-Picture Helper
  */
 
+declare global {
+  interface Window {
+    documentPictureInPicture?: {
+      requestWindow: (options?: { width?: number; height?: number }) => Promise<Window>;
+    };
+  }
+}
+
 /**
  * Triggers Picture-in-Picture window or fallback popup
- * @param {string} targetUrl
- * @returns {Promise<Window|null>}
  */
-export async function openPictureInPicture(targetUrl = window.location.href) {
-  if ('documentPictureInPicture' in window) {
+export async function openPictureInPicture(targetUrl: string = window.location.href): Promise<Window | null> {
+  if ('documentPictureInPicture' in window && window.documentPictureInPicture) {
     try {
       const pipWindow = await window.documentPictureInPicture.requestWindow({
         width: 450,
         height: 600,
       });
 
-      // Embed web app inside an iframe in the Document PiP window
       const iframe = pipWindow.document.createElement('iframe');
       iframe.src = targetUrl;
       iframe.style.width = '100%';
@@ -32,7 +37,6 @@ export async function openPictureInPicture(targetUrl = window.location.href) {
     }
   }
 
-  // Fallback to regular window.open popup if Doc PIP is unsupported or fails
   const popup = window.open(
     targetUrl,
     'NotesOnAnythingPIP',

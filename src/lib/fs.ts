@@ -8,13 +8,12 @@ const HANDLE_KEY = 'notesDirectory';
 
 /**
  * Open IndexedDB store
- * @returns {Promise<IDBDatabase>}
  */
-function openDB() {
+function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1);
     request.onupgradeneeded = (e) => {
-      const db = e.target.result;
+      const db = (e.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME);
       }
@@ -26,9 +25,8 @@ function openDB() {
 
 /**
  * Gets saved directory handle from IndexedDB
- * @returns {Promise<FileSystemDirectoryHandle|null>}
  */
-export async function getSavedDirectoryHandle() {
+export async function getSavedDirectoryHandle(): Promise<FileSystemDirectoryHandle | null> {
   try {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -46,9 +44,8 @@ export async function getSavedDirectoryHandle() {
 
 /**
  * Saves directory handle to IndexedDB
- * @param {FileSystemDirectoryHandle} handle
  */
-export async function saveDirectoryHandle(handle) {
+export async function saveDirectoryHandle(handle: FileSystemDirectoryHandle): Promise<void> {
   try {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -65,38 +62,39 @@ export async function saveDirectoryHandle(handle) {
 
 /**
  * Verifies or requests permission for FileSystemHandle
- * @param {FileSystemHandle} handle
- * @param {boolean} readWrite
- * @returns {Promise<boolean>}
  */
-export async function verifyPermission(handle, readWrite = true) {
+export async function verifyPermission(handle: FileSystemHandle, readWrite: boolean = true): Promise<boolean> {
   if (!handle) return false;
-  const options = { mode: readWrite ? 'readwrite' : 'read' };
-  if ((await handle.queryPermission(options)) === 'granted') {
-    return true;
+  const handleWithPerms = handle as unknown as {
+    queryPermission: (options?: { mode?: 'read' | 'readwrite' }) => Promise<string>;
+    requestPermission: (options?: { mode?: 'read' | 'readwrite' }) => Promise<string>;
+  };
+  const options = { mode: (readWrite ? 'readwrite' : 'read') as 'read' | 'readwrite' };
+  if (typeof handleWithPerms.queryPermission === 'function') {
+    if ((await handleWithPerms.queryPermission(options)) === 'granted') {
+      return true;
+    }
   }
-  if ((await handle.requestPermission(options)) === 'granted') {
-    return true;
+  if (typeof handleWithPerms.requestPermission === 'function') {
+    if ((await handleWithPerms.requestPermission(options)) === 'granted') {
+      return true;
+    }
   }
   return false;
 }
 
 /**
  * Reads text content from a FileHandle
- * @param {FileSystemFileHandle} fileHandle
- * @returns {Promise<string>}
  */
-export async function readTextFile(fileHandle) {
+export async function readTextFile(fileHandle: FileSystemFileHandle): Promise<string> {
   const file = await fileHandle.getFile();
   return await file.text();
 }
 
 /**
  * Writes text content to a FileHandle
- * @param {FileSystemFileHandle} fileHandle
- * @param {string} content
  */
-export async function writeTextFile(fileHandle, content) {
+export async function writeTextFile(fileHandle: FileSystemFileHandle, content: string): Promise<void> {
   const writable = await fileHandle.createWritable();
   await writable.write(content);
   await writable.close();
