@@ -6,7 +6,12 @@
  * Checks if the Web File System Access API (showDirectoryPicker) is supported.
  */
 export function isWebFSSupported(): boolean {
-  return typeof window !== 'undefined' && 'showDirectoryPicker' in window && typeof window.showDirectoryPicker === 'function';
+  if (typeof window === 'undefined') return false;
+  const searchParams = new URLSearchParams(window.location.search);
+  if (searchParams.has('opfs')) {
+    return true;
+  }
+  return 'showDirectoryPicker' in window && typeof window.showDirectoryPicker === 'function';
 }
 
 /**

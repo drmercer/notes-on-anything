@@ -88,7 +88,14 @@ export function NotesApp() {
         setIsSupported(false);
         return;
       }
-      const handle = await (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker();
+      const searchParams = new URLSearchParams(window.location.search);
+      let handle: FileSystemDirectoryHandle;
+      if (searchParams.has('opfs')) {
+        const root = await navigator.storage.getDirectory();
+        handle = await root.getDirectoryHandle('test', { create: true });
+      } else {
+        handle = await (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker();
+      }
       await saveDirectoryHandle(handle);
       setDirHandle(handle);
       setDirName(handle.name);

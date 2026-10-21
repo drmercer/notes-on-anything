@@ -14,14 +14,24 @@ describe('browserSupport utils', () => {
   describe('isWebFSSupported', () => {
     it('returns true when window.showDirectoryPicker is a function', () => {
       vi.stubGlobal('window', {
+        location: { search: '' },
         showDirectoryPicker: vi.fn(),
       });
       expect(isWebFSSupported()).toBe(true);
     });
 
-    it('returns false when window.showDirectoryPicker is undefined', () => {
-      vi.stubGlobal('window', {});
+    it('returns false when window.showDirectoryPicker is undefined and no opfs query param', () => {
+      vi.stubGlobal('window', {
+        location: { search: '' },
+      });
       expect(isWebFSSupported()).toBe(false);
+    });
+
+    it('returns true when opfs query param is present even if showDirectoryPicker is undefined', () => {
+      vi.stubGlobal('window', {
+        location: { search: '?opfs' },
+      });
+      expect(isWebFSSupported()).toBe(true);
     });
   });
 
