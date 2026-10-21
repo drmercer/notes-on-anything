@@ -32,4 +32,11 @@ The web application monitors `active.json` inside your notes directory. You can 
    ```bash
    cat ~/.config/notes-on-anything/active.json
    ```
-   When switching windows, the title will update automatically in format `{ "title": "Window Title" }`.
+   When switching windows or every second, the file will update automatically in format:
+   ```json
+   {
+     "title": "Window Title",
+     "watcherName": "GNOME Extension",
+     "watcherHeartbeat": "2026-03-30T12:00:00.000Z"
+   }
+   ```
