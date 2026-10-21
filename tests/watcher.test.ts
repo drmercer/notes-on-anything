@@ -1,5 +1,23 @@
 import { describe, it, expect } from 'vitest';
-import { isHeartbeatStale } from '../src/lib/watcher';
+import { isHeartbeatStale, cleanTitle } from '../src/lib/watcher';
+
+describe('cleanTitle', () => {
+  it('replaces all sequences of symbols with a single space and trims whitespace', () => {
+    expect(cleanTitle("* #dev-random - Slack")).toBe("dev random Slack");
+    expect(cleanTitle("⠹ Some codex session | main - main - Visual Studio Code")).toBe("Some codex session main main Visual Studio Code");
+  });
+
+  it('handles empty or blank titles', () => {
+    expect(cleanTitle('')).toBe('');
+    expect(cleanTitle('   ')).toBe('');
+    expect(cleanTitle('***')).toBe('');
+  });
+
+  it('preserves numbers and letters across languages', () => {
+    expect(cleanTitle('Notes - 123 (Draft) [v2]!')).toBe('Notes 123 Draft v2');
+    expect(cleanTitle('  Project: Alpha_Beta  ')).toBe('Project Alpha Beta');
+  });
+});
 
 describe('isHeartbeatStale', () => {
   const now = new Date('2026-03-30T12:00:10.000Z').getTime();

@@ -5,11 +5,14 @@ export interface ActiveWindowData {
 }
 
 /**
- * Determines whether a watcher heartbeat timestamp is stale (older than 3 seconds) or invalid/missing.
- * @param heartbeatIso - ISO timestamp string of the last heartbeat
- * @param nowMs - Current time in milliseconds (defaults to Date.now())
- * @returns true if the heartbeat was more than 3 seconds (3000 ms) ago or missing/invalid
+ * Cleans a window title by replacing all sequences of non-alphanumeric characters/symbols
+ * with a single space and trimming whitespace.
  */
+export function cleanTitle(title: string): string {
+  if (!title) return '';
+  return title.replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+
 export function isHeartbeatStale(heartbeatIso: string | null | undefined, nowMs: number = Date.now()): boolean {
   if (!heartbeatIso) return true;
   const heartbeatMs = new Date(heartbeatIso).getTime();

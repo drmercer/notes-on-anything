@@ -14,7 +14,7 @@ import {
 } from '../lib/frontmatter';
 import { openPictureInPicture } from '../lib/pip';
 import { isWebFSSupported } from '../lib/browserSupport';
-import { isHeartbeatStale } from '../lib/watcher';
+import { isHeartbeatStale, cleanTitle } from '../lib/watcher';
 import { LandingPage } from './LandingPage';
 
 export function NotesApp() {
@@ -174,26 +174,30 @@ export function NotesApp() {
     const resolveNoteForTitle = async (title: string) => {
       if (!dirHandle) return;
 
+          const cleaned = cleanTitle(title);
+
       try {
         let matchedFileHandle: FileSystemFileHandle | null = null;
         let matchedFileName = '';
         let matchedFrontmatter: Record<string, string> = {};
         let matchedBody = '';
 
-        for await (const entry of (dirHandle as any).values()) {
-          if (entry.kind === 'file' && entry.name.endsWith('.md')) {
-            try {
-              const fileText = await readTextFile(entry as FileSystemFileHandle);
-              const { data, content } = parseFrontmatter(fileText);
-              if (data && data.windowTitle === title) {
-                matchedFileHandle = entry as FileSystemFileHandle;
-                matchedFileName = entry.name;
-                matchedFrontmatter = data;
-                matchedBody = content;
-                break;
+            if (cleaned) {
+              for await (const entry of (dirHandle as any).values()) {
+                if (entry.kind === 'file' && entry.name.endsWith('.md')) {
+                  try {
+                    const fileText = await readTextFile(entry as FileSystemFileHandle);
+                    const { data, content } = parseFrontmatter(fileText);
+                    if (data && data.windowTitle === cleaned) {
+                      matchedFileHandle = entry as FileSystemFileHandle;
+                      matchedFileName = entry.name;
+                      matchedFrontmatter = data;
+                      matchedBody = content;
+                      break;
+                    }
+                  } catch (e) {
+                    // ignore file read error
               }
-            } catch (e) {
-              // ignore file read error
             }
           }
         }
@@ -205,9 +209,9 @@ export function NotesApp() {
           setNoteContent(matchedBody);
           setIsSaved(true);
           setStatusMessage(`Active note: ${matchedFileName}`);
-        } else if (title) {
+            } else if (cleaned) {
           const newFileName = generateNoteFilename();
-          const newFrontmatter = { windowTitle: title };
+              const newFrontmatter = { windowTitle: cleaned };
           const initialContent = stringifyFrontmatter(newFrontmatter, `# Note for ${title}\n\n`);
 
           const newFileHandle = await dirHandle.getFileHandle(newFileName, { create: true });
