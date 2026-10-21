@@ -25,7 +25,7 @@ importers:
         specifier: ^26.6.5
         version: 26.6.5
       typescript:
-        specifier: ^5.8.2
+        specifier: 5.8.2
         version: 5.8.2
       vitest:
         specifier: ^5.0.5
