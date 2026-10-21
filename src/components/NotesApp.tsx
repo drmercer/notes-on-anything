@@ -16,6 +16,7 @@ import { openPictureInPicture } from '../lib/pip';
 import { isWebFSSupported } from '../lib/browserSupport';
 import { isHeartbeatStale } from '../lib/watcher';
 import { LandingPage } from './LandingPage';
+import { MarkdownEditor } from './MarkdownEditor';
 
 export function NotesApp() {
   const [isSupported, setIsSupported] = useState<boolean>(true);
@@ -29,7 +30,7 @@ export function NotesApp() {
   const [noteContent, setNoteContent] = useState<string>('');
   const [frontmatterData, setFrontmatterData] = useState<Record<string, string>>({});
   const [statusMessage, setStatusMessage] = useState<string>('Please select a notes directory.');
-  const [isSaved, setIsSaved] = useState<boolean>(true);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [watcherName, setWatcherName] = useState<string>('');
   const [watcherHeartbeat, setWatcherHeartbeat] = useState<string>('');
   const [nowMs, setNowMs] = useState<number>(Date.now());
@@ -40,11 +41,75 @@ export function NotesApp() {
   const activeNoteFileRef = useRef<FileSystemFileHandle | null>(activeNoteFile);
   activeNoteFileRef.current = activeNoteFile;
 
+  const activeFileNameRef = useRef<string>(activeFileName);
+  activeFileNameRef.current = activeFileName;
+
   const noteContentRef = useRef<string>(noteContent);
   noteContentRef.current = noteContent;
 
   const frontmatterDataRef = useRef<Record<string, string>>(frontmatterData);
   frontmatterDataRef.current = frontmatterData;
+
+  const hasUnsavedChangesRef = useRef<boolean>(false);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const saveActiveNoteImmediately = async (contentToSave?: string) => {
+    if (!activeNoteFileRef.current) return;
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+    const textToWrite = contentToSave !== undefined ? contentToSave : noteContentRef.current;
+    const fullText = stringifyFrontmatter(frontmatterDataRef.current, textToWrite);
+    try {
+      setIsSaving(true);
+      await writeTextFile(activeNoteFileRef.current, fullText);
+      setIsSaving(false);
+      hasUnsavedChangesRef.current = false;
+      setStatusMessage(`Saved ${activeFileNameRef.current} automatically.`);
+    } catch (err: any) {
+      console.error('Error auto-saving note:', err);
+      setIsSaving(false);
+      setStatusMessage(`Error auto-saving note: ${err.message}`);
+    }
+  };
+
+  const handleMarkdownChange = (newMarkdown: string) => {
+    noteContentRef.current = newMarkdown;
+    setNoteContent(newMarkdown);
+    setIsSaving(true);
+    hasUnsavedChangesRef.current = true;
+
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
+
+    autosaveTimerRef.current = setTimeout(() => {
+      saveActiveNoteImmediately(newMarkdown);
+    }, 500);
+  };
+
+  useEffect(() => {
+    const handleFlush = () => {
+      if (hasUnsavedChangesRef.current && activeNoteFileRef.current) {
+        saveActiveNoteImmediately();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleFlush);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        handleFlush();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleFlush);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      handleFlush();
+    };
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -174,6 +239,13 @@ export function NotesApp() {
     const resolveNoteForTitle = async (title: string) => {
       if (!dirHandle) return;
 
+      if (hasUnsavedChangesRef.current && activeNoteFileRef.current) {
+        await saveActiveNoteImmediately();
+      } else if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+
       try {
         let matchedFileHandle: FileSystemFileHandle | null = null;
         let matchedFileName = '';
@@ -203,7 +275,8 @@ export function NotesApp() {
           setActiveFileName(matchedFileName);
           setFrontmatterData(matchedFrontmatter);
           setNoteContent(matchedBody);
-          setIsSaved(true);
+          setIsSaving(false);
+          hasUnsavedChangesRef.current = false;
           setStatusMessage(`Active note: ${matchedFileName}`);
         } else if (title) {
           const newFileName = generateNoteFilename();
@@ -219,7 +292,8 @@ export function NotesApp() {
           setActiveFileName(newFileName);
           setFrontmatterData(data);
           setNoteContent(content);
-          setIsSaved(true);
+          setIsSaving(false);
+          hasUnsavedChangesRef.current = false;
           setStatusMessage(`Created new note: ${newFileName}`);
         }
       } catch (err: any) {
@@ -249,26 +323,6 @@ export function NotesApp() {
       if (observer) observer.disconnect();
     };
   }, [dirHandle]);
-
-  const handleContentChange = (e: Event) => {
-    const target = e.target as HTMLTextAreaElement;
-    setNoteContent(target.value);
-    setIsSaved(false);
-  };
-
-  const handleSaveNote = async () => {
-    if (!activeNoteFile) return;
-
-    try {
-      const fullText = stringifyFrontmatter(frontmatterDataRef.current, noteContentRef.current);
-      await writeTextFile(activeNoteFile, fullText);
-      setIsSaved(true);
-      setStatusMessage(`Saved ${activeFileName} successfully.`);
-    } catch (err: any) {
-      console.error('Error saving note:', err);
-      setStatusMessage(`Error saving note: ${err.message}`);
-    }
-  };
 
   if (!dirHandle) {
     return (
@@ -335,29 +389,19 @@ export function NotesApp() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
           <label style={{ fontWeight: 'bold' }}>
             {activeFileName ? `Note: ${activeFileName}` : 'Editor'}
-            {!isSaved && <span style={{ color: '#d9534f', marginLeft: '0.5rem' }}>(Unsaved changes)</span>}
           </label>
           {activeNoteFile && (
-            <button onClick={handleSaveNote} style={{ padding: '0.4rem 0.8rem', cursor: 'pointer' }}>
-              Save
-            </button>
+            <div style={{ fontSize: '0.85rem', color: isSaving ? '#d97706' : '#16a34a', fontWeight: 'bold' }}>
+              {isSaving ? 'Saving...' : 'Autosaved'}
+            </div>
           )}
         </div>
 
-        <textarea
-          value={noteContent}
-          onInput={handleContentChange}
+        <MarkdownEditor
+          activeNoteKey={activeFileName}
+          defaultValue={noteContent}
+          onChange={handleMarkdownChange}
           placeholder={dirHandle ? 'Select a window to start editing notes...' : 'Open notes directory to get started.'}
-          style={{
-            width: '100%',
-            height: '350px',
-            fontFamily: 'monospace, sans-serif',
-            fontSize: '1rem',
-            padding: '0.75rem',
-            boxSizing: 'border-box',
-            borderRadius: '4px',
-            border: '1px solid #ccc'
-          }}
         />
       </main>
 
