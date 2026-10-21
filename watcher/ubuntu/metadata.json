@@ -1,0 +1,16 @@
+{
+  "uuid": "notes-on-anything-watcher@local",
+  "name": "Notes on Anything Watcher",
+  "description": "Watches focused window title and writes it to active.json in ~/.config/notes-on-anything/ or custom path.",
+  "shell-version": [
+    "40",
+    "41",
+    "42",
+    "43",
+    "44",
+    "45",
+    "46",
+    "47"
+  ],
+  "url": "https://github.com/example/notes-on-anything"
+}
