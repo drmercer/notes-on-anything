@@ -4,6 +4,7 @@ import { NotesApp } from '../src/components/NotesApp';
 describe('NotesApp component', () => {
   it('creates NotesApp JSX vnode element', () => {
     const vnode = <NotesApp />;
+    expect(vnode).toBeDefined();
     expect(vnode.type).toBe(NotesApp);
   });
 

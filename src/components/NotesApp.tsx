@@ -14,6 +14,7 @@ import {
 } from '../lib/frontmatter';
 import { openPictureInPicture } from '../lib/pip';
 import { isWebFSSupported } from '../lib/browserSupport';
+import { isHeartbeatStale } from '../lib/watcher';
 import { LandingPage } from './LandingPage';
 
 export function NotesApp() {
@@ -29,6 +30,9 @@ export function NotesApp() {
   const [frontmatterData, setFrontmatterData] = useState<Record<string, string>>({});
   const [statusMessage, setStatusMessage] = useState<string>('Please select a notes directory.');
   const [isSaved, setIsSaved] = useState<boolean>(true);
+  const [watcherName, setWatcherName] = useState<string>('');
+  const [watcherHeartbeat, setWatcherHeartbeat] = useState<string>('');
+  const [nowMs, setNowMs] = useState<number>(Date.now());
 
   const activeTitleRef = useRef<string>(activeTitle);
   activeTitleRef.current = activeTitle;
@@ -41,6 +45,13 @@ export function NotesApp() {
 
   const frontmatterDataRef = useRef<Record<string, string>>(frontmatterData);
   frontmatterDataRef.current = frontmatterData;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!isWebFSSupported()) {
@@ -126,19 +137,23 @@ export function NotesApp() {
         }
 
         const jsonText = await readTextFile(activeJsonHandle);
-        let parsed: { title?: string } | null = null;
+        let parsed: { title?: string; watcherName?: string; watcherHeartbeat?: string } | null = null;
         try {
           parsed = JSON.parse(jsonText);
         } catch (e) {
           return;
         }
 
+        if (!isSubscribed) return;
+
+        setWatcherName(parsed?.watcherName ?? '');
+        setWatcherHeartbeat(parsed?.watcherHeartbeat ?? '');
+
         const title = parsed?.title ?? '';
         if (title.includes('Notes on Anything 📝')) {
           return;
         }
         if (title !== activeTitleRef.current) {
-          if (!isSubscribed) return;
           setActiveTitle(title);
           await resolveNoteForTitle(title);
         }
@@ -278,12 +293,33 @@ export function NotesApp() {
       </header>
 
       <section style={{ backgroundColor: '#f5f5f5', padding: '0.75rem', borderRadius: '4px', marginBottom: '1rem' }}>
-        <strong style={{ display: 'block', fontSize: '0.85rem', color: '#555', marginBottom: '0.25rem' }}>
-          ACTIVE WINDOW TITLE:
-        </strong>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+          <strong style={{ fontSize: '0.85rem', color: '#555' }}>
+            ACTIVE WINDOW TITLE:
+          </strong>
+          <span style={{ fontSize: '0.85rem', color: '#555' }}>
+            Watcher: <strong>{watcherName || 'None'}</strong>
+          </span>
+        </div>
         <div style={{ fontSize: '1rem', fontWeight: 'bold', wordBreak: 'break-all' }}>
           {activeTitle || '(No window title detected yet)'}
         </div>
+        {isHeartbeatStale(watcherHeartbeat, nowMs) && (
+          <div
+            data-testid="watcher-warning"
+            style={{
+              marginTop: '0.5rem',
+              color: '#856404',
+              backgroundColor: '#fff3cd',
+              border: '1px solid #ffeeba',
+              padding: '0.5rem',
+              borderRadius: '4px',
+              fontSize: '0.85rem'
+            }}
+          >
+            ⚠️ Warning: Watcher heartbeat was more than 3 seconds ago
+          </div>
+        )}
       </section>
 
       <main>

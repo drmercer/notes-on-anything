@@ -1,7 +1,6 @@
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Shell from 'gi://Shell';
-import Meta from 'gi://Meta';
 
 export default class Extension {
     constructor(metadata) {
@@ -12,6 +11,7 @@ export default class Extension {
         this._focusedWindow = null;
         this._targetDir = null;
         this._activeJsonFile = null;
+        this._timeoutId = null;
     }
 
     enable() {
@@ -31,9 +31,20 @@ export default class Extension {
         });
 
         this._onFocusWindowChanged();
+
+        // Start 1 second heartbeat timer
+        this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
+            this._writeActiveTitle();
+            return GLib.SOURCE_CONTINUE;
+        });
     }
 
     disable() {
+        if (this._timeoutId) {
+            GLib.Source.remove(this._timeoutId);
+            this._timeoutId = null;
+        }
+
         if (this._focusSignalId) {
             global.display.disconnect(this._focusSignalId);
             this._focusSignalId = null;
@@ -72,7 +83,11 @@ export default class Extension {
             title = this._focusedWindow.get_title() || '';
         }
 
-        const data = JSON.stringify({ title: title }, null, 2);
+        const data = JSON.stringify({
+            title: title,
+            watcherName: 'GNOME Extension',
+            watcherHeartbeat: new Date().toISOString()
+        }, null, 2);
 
         try {
             this._activeJsonFile.replace_contents_async(
