@@ -57,7 +57,25 @@ export function LandingPage({
             </span>
           </div>
 
-          <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <a
+              href="/install"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                color: '#2563eb',
+                textDecoration: 'none',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                padding: '0.4rem 0.8rem',
+                borderRadius: '6px',
+                border: '1px solid #bfdbfe',
+                backgroundColor: '#eff6ff'
+              }}
+            >
+              ⚙️ Install Watcher
+            </a>
             <a
               href="https://github.com/drmercer/notes-on-anything"
               target="_blank"
@@ -132,9 +150,20 @@ export function LandingPage({
             <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', color: '#1f2937' }}>
               🎯 Active Window Tracking
             </h3>
-            <p style={{ margin: 0, fontSize: '0.95rem', color: '#6b7280', lineHeight: 1.5 }}>
+            <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', color: '#6b7280', lineHeight: 1.5 }}>
               Runs with a lightweight local watcher (e.g. Ubuntu GNOME extension) that updates your active window title seamlessly.
             </p>
+            <a
+              href="/install"
+              style={{
+                color: '#2563eb',
+                textDecoration: 'none',
+                fontWeight: 600,
+                fontSize: '0.875rem'
+              }}
+            >
+              Installation instructions &rarr;
+            </a>
           </div>
 
           <div style={{
