@@ -1,8 +1,19 @@
 # Notes on Anything - Ubuntu GNOME Extension Watcher
 
-This GNOME extension monitors the active/focused window in Ubuntu / GNOME Shell and writes its window title to `active.json` inside `~/.config/notes-on-anything/active.json`.
+This GNOME extension monitors the active/focused window in Ubuntu / GNOME Shell and writes its window title to `active.json`. Its settings live in `~/.config/notes-on-anything/config.json`.
 
-The web application monitors `active.json` inside your notes directory. You can copy or symlink `~/.config/notes-on-anything/active.json` into your designated notes folder, or select `~/.config/notes-on-anything` as your notes directory in the web application.
+On first run, the extension creates this config with the default output directory:
+
+```json
+{
+  "targetDir": "/home/your-user/.config/notes-on-anything"
+}
+```
+
+Change `targetDir` to the directory where the web application should monitor `active.json`. The extension creates the directory if needed and rereads the config on each write, so changes take effect while it is running.
+
+> [!WARNING]
+> The Web FS API (at least in Chromium) hides any files that are symlinks to sensitive system files, such as a file in .config. So the `targetDir` should be a directory outside of `.config`, like in `~/Documents` or `~/Notes`.
 
 ## Requirements & Design
 - **Vanilla JavaScript**: Written with zero npm dependencies and no build step.
@@ -30,7 +41,7 @@ The web application monitors `active.json` inside your notes directory. You can 
 4. **Verify Active Window Title Output**:
    Check the output file:
    ```bash
-   cat ~/.config/notes-on-anything/active.json
+   cat /path/to/targetDir/active.json
    ```
    When switching windows or every second, the file will update automatically in format:
    ```json

@@ -1,7 +1,7 @@
 {
   "uuid": "notes-on-anything-watcher@local",
   "name": "Notes on Anything Watcher",
-  "description": "Watches focused window title and writes it to active.json in ~/.config/notes-on-anything/ or custom path.",
+  "description": "Watches focused window title and writes active.json to the directory configured in ~/.config/notes-on-anything/config.json.",
   "shell-version": [
     "40",
     "41",

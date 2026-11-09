@@ -9,7 +9,7 @@ export default class Extension {
         this._focusSignalId = null;
         this._titleSignalId = null;
         this._focusedWindow = null;
-        this._targetDir = null;
+        this._configDir = null;
         this._activeJsonFile = null;
         this._timeoutId = null;
     }
@@ -17,13 +17,20 @@ export default class Extension {
     enable() {
         this._windowTracker = Shell.WindowTracker.get_default();
 
-        // Setup storage directory (~/.config/notes-on-anything/active.json)
+        // Open config file (~/.config/notes-on-anything/config.json)
         const configDir = GLib.get_user_config_dir();
-        this._targetDir = GLib.build_filenamev([configDir, 'notes-on-anything']);
-        GLib.mkdir_with_parents(this._targetDir, 0o755);
+        this._configDir = GLib.build_filenamev([configDir, 'notes-on-anything']);
+        GLib.mkdir_with_parents(this._configDir, 0o755);
 
-        const filePath = GLib.build_filenamev([this._targetDir, 'active.json']);
-        this._activeJsonFile = Gio.File.new_for_path(filePath);
+        const configFilePath = GLib.build_filenamev([this._configDir, 'config.json']);
+        // Initialize config file with default values if it doesn't exist.
+        if (!GLib.file_test(configFilePath, GLib.FileTest.EXISTS)) {
+            const defaultConfig = JSON.stringify({
+                targetDir: this._configDir
+            }, null, 2);
+            GLib.file_set_contents(configFilePath, defaultConfig);
+        }
+        this._configFilePath = configFilePath;
 
         // Connect signal for focus changes
         this._focusSignalId = global.display.connect('notify::focus-window', () => {
@@ -78,6 +85,31 @@ export default class Extension {
     }
 
     _writeActiveTitle() {
+        // Read the setting on each write so changes take effect without restarting
+        // the extension. Fall back to the config directory for missing/invalid config.
+        let targetDir = this._configDir;
+        try {
+            const [, contents] = GLib.file_get_contents(this._configFilePath);
+            const config = JSON.parse(new TextDecoder().decode(contents));
+            if (typeof config.targetDir === 'string' && config.targetDir.trim()) {
+                targetDir = config.targetDir.trim();
+            }
+        } catch (e) {
+            // Keep using the default location if config cannot be read or parsed.
+        }
+
+        try {
+            GLib.mkdir_with_parents(targetDir, 0o755);
+            const filePath = GLib.build_filenamev([targetDir, 'active.json']);
+            this._activeJsonFile = Gio.File.new_for_path(filePath);
+        } catch (e) {
+            // Keep the last usable destination if the configured path is unavailable.
+        }
+        if (!this._activeJsonFile) {
+            const filePath = GLib.build_filenamev([this._configDir, 'active.json']);
+            this._activeJsonFile = Gio.File.new_for_path(filePath);
+        }
+
         let title = '';
         if (this._focusedWindow) {
             title = this._focusedWindow.get_title() || '';

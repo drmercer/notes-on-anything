@@ -132,6 +132,7 @@ export function NotesApp() {
 
   useEffect(() => {
     if (!dirHandle) return;
+    Object.assign(window, { dirHandle });
 
     let isSubscribed = true;
     let pollInterval: ReturnType<typeof setInterval> | null = null;
@@ -142,6 +143,7 @@ export function NotesApp() {
         try {
           activeJsonHandle = await dirHandle.getFileHandle('active.json');
         } catch (e) {
+          console.warn("active.json not found in directory:", e);
           return;
         }
 
