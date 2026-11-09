@@ -29,6 +29,15 @@ export async function openPictureInPicture(targetUrl: string = window.location.h
 
       pipWindow.document.body.style.margin = '0';
       pipWindow.document.body.style.padding = '0';
+      pipWindow.document.body.style.width = "100%";
+      pipWindow.document.body.style.height = "100%";
+
+      pipWindow.document.documentElement.style.margin = "0";
+      pipWindow.document.documentElement.style.padding = "0";
+      pipWindow.document.documentElement.style.width = "100%";
+      pipWindow.document.documentElement.style.height = "100%";
+      pipWindow.document.documentElement.style.overflow = "hidden";
+
       pipWindow.document.body.appendChild(iframe);
 
       return pipWindow;
