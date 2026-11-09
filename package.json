@@ -12,14 +12,12 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@astrojs/preact": "^6.1.0",
-    "astro": "^7.4.0",
-    "preact": "^11.0.1"
-  },
-  "devDependencies": {
-    "@astrojs/check": "^0.9.10",
-    "@types/node": "^26.6.5",
-    "typescript": "5.8.2",
-    "vitest": "^5.0.5"
+    "@astrojs/check": "0.9.12",
+    "@astrojs/preact": "6.1.2",
+    "@types/node": "26.6.6",
+    "astro": "7.4.7",
+    "preact": "11.2.0",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0"
   }
 }
