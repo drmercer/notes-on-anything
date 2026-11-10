@@ -297,7 +297,21 @@ export function NotesApp() {
             {dirName ? `Notes directory: ${dirName}` : 'No directory opened'}
           </span>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <a
+            href="/install"
+            style={{
+              padding: '0.5rem 0.8rem',
+              color: '#4b5563',
+              textDecoration: 'none',
+              fontSize: '0.9rem',
+              borderRadius: '4px',
+              border: '1px solid #ccc',
+              backgroundColor: '#f8f9fa'
+            }}
+          >
+            Install Watcher
+          </a>
           <button onClick={handleSelectDirectory} style={{ padding: '0.5rem 1rem', cursor: 'pointer' }}>
             Change Folder
           </button>
@@ -329,10 +343,25 @@ export function NotesApp() {
               border: '1px solid #ffeeba',
               padding: '0.5rem',
               borderRadius: '4px',
-              fontSize: '0.85rem'
+              fontSize: '0.85rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '0.5rem'
             }}
           >
-            ⚠️ Warning: Watcher heartbeat was more than 3 seconds ago
+            <span>⚠️ Warning: Watcher heartbeat was more than 3 seconds ago</span>
+            <a
+              href="/install"
+              style={{
+                color: '#856404',
+                fontWeight: 600,
+                textDecoration: 'underline'
+              }}
+            >
+              Need help? View installation instructions &rarr;
+            </a>
           </div>
         )}
       </section>
